@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小型船舶 最大搭載人員算定シミュレーター</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d1b2a;--bg2:#162234;--bg3:#1e2f44;
+  --accent:#2196f3;--accent2:#64b5f6;--teal:#00bcd4;
+  --green:#26a69a;--green2:#4db6ac;
+  --amber:#ffa726;--red:#ef5350;
+  --text:#dde6f5;--muted:#7a94b8;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.14);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);
+  min-height:100vh;padding:1.5rem 1rem 4rem;
+  background-image:radial-gradient(ellipse 70% 40% at 50% 0%,rgba(33,150,243,0.1) 0%,transparent 60%)}
+.container{max-width:720px;margin:0 auto}
+
+header{text-align:center;margin-bottom:1.8rem}
+.badge{display:inline-block;font-family:'DM Mono',monospace;font-size:11px;
+  letter-spacing:0.12em;color:var(--teal);background:rgba(0,188,212,0.1);
+  border:1px solid rgba(0,188,212,0.25);border-radius:100px;padding:4px 14px;margin-bottom:0.7rem}
+h1{font-size:clamp(17px,4vw,22px);font-weight:700;color:#fff;margin-bottom:0.3rem}
+header p{font-size:12px;color:var(--muted);line-height:1.7}
+
+/* カード */
+.card{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;
+  padding:1.2rem 1.4rem;margin-bottom:1rem}
+.card-title{font-size:12px;font-weight:500;color:var(--muted);
+  text-transform:uppercase;letter-spacing:0.06em;margin-bottom:1rem}
+
+/* 適用区分 */
+.radio-group{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:0.5rem}
+.radio-group input[type=radio]{display:none}
+.radio-group label{flex:1;min-width:140px;text-align:center;
+  padding:9px 12px;font-size:13px;font-weight:500;
+  color:var(--muted);background:rgba(255,255,255,0.04);
+  border:1px solid var(--border2);border-radius:10px;
+  cursor:pointer;transition:all 0.15s;line-height:1.4}
+.radio-group input:checked+label{background:rgba(33,150,243,0.18);
+  border-color:var(--accent);color:var(--accent2)}
+.radio-group label:hover{background:rgba(255,255,255,0.07)}
+
+/* フォーム */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.grid1{margin-bottom:12px}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:500}
+.field label span{font-family:'DM Mono',monospace;font-size:11px;color:#546e7a;margin-left:4px}
+.field input[type=number]{width:100%;height:38px;
+  background:rgba(255,255,255,0.05);border:1px solid var(--border2);
+  border-radius:9px;color:var(--text);font-family:'DM Mono',monospace;
+  font-size:14px;padding:0 12px;transition:border-color 0.2s,background 0.2s;
+  -moz-appearance:textfield}
+.field input::-webkit-inner-spin-button,.field input::-webkit-outer-spin-button{-webkit-appearance:none}
+.field input:focus{outline:none;border-color:var(--accent);background:rgba(33,150,243,0.08)}
+.hint{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.6}
+
+/* 附属書[2-7]トグル */
+.toggle-wrap{background:rgba(0,188,212,0.06);border:1px solid rgba(0,188,212,0.2);
+  border-radius:10px;padding:0.9rem 1rem;margin-bottom:12px}
+.toggle-wrap label{display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text)}
+.toggle-wrap input[type=checkbox]{width:18px;height:18px;accent-color:var(--teal);cursor:pointer}
+.toggle-sub{display:none;margin-top:0.8rem;padding-top:0.8rem;
+  border-top:1px solid rgba(0,188,212,0.15)}
+.toggle-sub.show{display:block}
+
+/* 計算ボタン */
+.btn-calc{width:100%;height:48px;background:var(--accent);border:none;
+  border-radius:12px;color:#fff;font-family:'Noto Sans JP',sans-serif;
+  font-size:15px;font-weight:700;cursor:pointer;transition:background 0.2s,transform 0.1s;
+  margin-top:0.5rem}
+.btn-calc:hover{background:#1976d2}
+.btn-calc:active{transform:scale(0.98)}
+
+/* 結果 */
+#results{display:none;margin-top:1rem;animation:fadeUp 0.3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.result-main{background:linear-gradient(135deg,rgba(38,166,154,0.15),rgba(33,150,243,0.1));
+  border:1px solid rgba(38,166,154,0.35);border-radius:14px;
+  padding:1.5rem;text-align:center;margin-bottom:1rem}
+.result-label{font-size:13px;color:var(--green2);margin-bottom:0.5rem;font-weight:500}
+.result-N{font-family:'DM Mono',monospace;font-size:56px;font-weight:500;color:#fff;line-height:1}
+.result-unit{font-size:14px;color:var(--muted);margin-top:0.3rem}
+
+/* 算式カード */
+.formula-cards{display:grid;gap:10px;margin-bottom:1rem}
+.fc{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:1rem 1.2rem}
+.fc.active{border-color:rgba(38,166,154,0.5);background:rgba(38,166,154,0.06)}
+.fc.binding{border-color:var(--amber);background:rgba(255,167,38,0.07)}
+.fc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem}
+.fc-name{font-size:12px;font-weight:500;color:var(--muted)}
+.fc-badge{font-size:11px;padding:2px 8px;border-radius:100px;font-family:'DM Mono',monospace}
+.badge-ok{background:rgba(38,166,154,0.15);color:var(--green2);border:1px solid rgba(38,166,154,0.3)}
+.badge-binding{background:rgba(255,167,38,0.15);color:var(--amber);border:1px solid rgba(255,167,38,0.3)}
+.fc-formula{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);margin-bottom:0.5rem;line-height:1.7}
+.fc-value{font-family:'DM Mono',monospace;font-size:18px;color:var(--text);font-weight:500}
+.fc-value span{font-size:13px;color:var(--muted)}
+
+/* 中間値テーブル */
+.mid-table{width:100%;border-collapse:collapse;font-size:12px}
+.mid-table td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
+.mid-table tr:last-child td{border-bottom:none}
+.mid-table .lbl{color:var(--muted);font-family:'DM Mono',monospace}
+.mid-table .val{text-align:right;font-family:'DM Mono',monospace;color:var(--text);font-weight:500}
+
+.note-box{background:rgba(255,167,38,0.07);border:1px solid rgba(255,167,38,0.2);
+  border-radius:10px;padding:0.8rem 1rem;font-size:12px;color:var(--muted);line-height:1.8;margin-top:0.5rem}
+
+footer{text-align:center;margin-top:2rem;font-size:11px;color:var(--muted);line-height:1.9}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <div class="badge">小安則 第102条・第103条 ／ 附属書[2-7]</div>
+  <h1>小型船舶 最大搭載人員算定シミュレーター</h1>
+  <p>復原性に基づく定員算定 ／ 沿海区域・平水区域・客席床低船対応</p>
+</header>
+
+<!-- 適用区分 -->
+<div class="card">
+  <div class="card-title">適用区分</div>
+  <div class="radio-group">
+    <input type="radio" name="zone" id="z1" value="enkai" checked onchange="onZoneChange()">
+    <label for="z1">沿海区域<br><small style="font-size:11px;font-weight:400">第102条</small></label>
+    <input type="radio" name="zone" id="z2" value="heisui" onchange="onZoneChange()">
+    <label for="z2">平水区域<br><small style="font-size:11px;font-weight:400">第103条</small></label>
+  </div>
+</div>
+
+<!-- 入力フォーム -->
+<div class="card">
+  <div class="card-title">船体寸法・乾げん</div>
+  <div class="grid2">
+    <div class="field">
+      <label>船の長さ L <span>(m)</span></label>
+      <input type="number" id="L" value="8.0" step="0.01" min="0.1">
+      <div class="hint">小安則第15条の船の長さ</div>
+    </div>
+    <div class="field">
+      <label>船の幅 B <span>(m)</span></label>
+      <input type="number" id="B" value="2.5" step="0.01" min="0.1">
+      <div class="hint">最大幅</div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="field">
+      <label>船の深さ D <span>(m)</span></label>
+      <input type="number" id="D" value="0.9" step="0.001" min="0.01">
+      <div class="hint">キール上面〜上甲板ビームげん側上面</div>
+    </div>
+    <div class="field">
+      <label>中央乾げん F <span>(m)</span></label>
+      <input type="number" id="F" value="0.45" step="0.001" min="0">
+      <div class="hint">船中央、無搭乗状態</div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="field">
+      <label>最小乾げん F₁ <span>(m)</span></label>
+      <input type="number" id="F1" value="0.40" step="0.001" min="0">
+      <div class="hint">無搭乗状態の最小乾げん</div>
+    </div>
+    <div class="field" id="F2wrap">
+      <label>船尾最小乾げん F₂ <span>(m)</span></label>
+      <input type="number" id="F2" value="0.38" step="0.001" min="0">
+      <div class="hint">無搭乗状態、船尾における最小乾げん</div>
+    </div>
+  </div>
+  <div class="grid1" id="bwrap">
+    <div class="field">
+      <label>半幅 b <span>(m)</span></label>
+      <input type="number" id="b" value="1.25" step="0.001" min="0">
+      <div class="hint">満載時最小乾げん位置でのげん側〜船体中央縦断面の水平距離（最大値）</div>
+    </div>
+  </div>
+</div>
+
+<!-- 附属書[2-7] -->
+<div class="card">
+  <div class="card-title">附属書[2-7]（客席床面低・乾げん特大船）</div>
+  <div class="toggle-wrap">
+    <label>
+      <input type="checkbox" id="chk27" onchange="on27Change()">
+      附属書[2-7]を適用する（無甲板船等、客席床面が低く乾げんが特に大きい船舶）
+    </label>
+    <div class="toggle-sub" id="sub27">
+      <div class="grid1">
+        <div class="field">
+          <label>客席床高さ h <span>(m)</span></label>
+          <input type="number" id="h" value="0.20" step="0.001" min="0">
+          <div class="hint">キール上面〜客席床上面の高さ</div>
+        </div>
+      </div>
+      <div class="note-box">
+        附属書[2-7]適用時、第103条のDを有効深さD'に置き換えます：<br>
+        D' = D − max( F − (B/5.5 + 0.09) , 2h )<br>
+        <small style="color:#546e7a">※ F は上記「中央乾げん F」の入力値を使用します</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button class="btn-calc" onclick="calc()">最大搭載人員を算定する</button>
+
+<!-- 結果 -->
+<div id="results">
+  <div class="result-main">
+    <div class="result-label" id="resZoneLabel"></div>
+    <div class="result-N" id="resN">—</div>
+    <div class="result-unit">人（最大搭載人員）</div>
+  </div>
+
+  <div class="formula-cards" id="formulaCards"></div>
+
+  <div class="card">
+    <div class="card-title">中間値</div>
+    <table class="mid-table" id="midTable"></table>
+  </div>
+
+  <div class="note-box" id="noteBox"></div>
+</div>
+
+</div><!-- /container -->
+
+<footer>
+  小型船舶安全規則 第102条・第103条 および 附属書[2-7] に基づく算定<br>
+  本ツールは参考計算です。最終判断は日本小型船舶検査機構にご確認ください。
+</footer>
+
+<script>
+function onZoneChange(){
+  var z=document.querySelector('[name=zone]:checked').value;
+  var isEnkai = z==='enkai';
+  // F2（船尾最小乾げん）は沿海・平水 両方の算式で使用 → 常時有効
+  document.getElementById('F2wrap').style.opacity = '1';
+  document.getElementById('F2wrap').querySelector('input').disabled = false;
+  // b（半幅）は沿海の算式②のみで使用
+  document.getElementById('bwrap').style.opacity = isEnkai?'1':'0.4';
+  document.getElementById('bwrap').querySelector('input').disabled = !isEnkai;
+  // 附属書[2-7]は平水のみ（103条）
+  if(isEnkai){
+    document.getElementById('chk27').checked=false;
+    on27Change();
+    document.getElementById('chk27').disabled=true;
+    document.querySelector('.toggle-wrap').style.opacity='0.4';
+  } else {
+    document.getElementById('chk27').disabled=false;
+    document.querySelector('.toggle-wrap').style.opacity='1';
+  }
+}
+
+function on27Change(){
+  var chk=document.getElementById('chk27').checked;
+  var sub=document.getElementById('sub27');
+  sub.classList.toggle('show',chk);
+}
+
+function r4(v){ return Math.round(v*10000)/10000; }
+function r2(v){ return Math.round(v*100)/100; }
+function fl(v){ return Math.floor(v); }
+
+function calc(){
+  var zone=document.querySelector('[name=zone]:checked').value;
+  var L=parseFloat(document.getElementById('L').value)||0;
+  var B=parseFloat(document.getElementById('B').value)||0;
+  var D=parseFloat(document.getElementById('D').value)||0;
+  var F=parseFloat(document.getElementById('F').value)||0;
+  var F1=parseFloat(document.getElementById('F1').value)||0;
+  var F2=parseFloat(document.getElementById('F2').value)||0;
+  var b=parseFloat(document.getElementById('b').value)||0;
+  var use27=document.getElementById('chk27').checked;
+  var h=parseFloat(document.getElementById('h').value)||0;
+
+  // F上限: F > B/5.5 + 0.09 なら B/5.5 + 0.09 に制限
+  var F_lim = B/5.5 + 0.09;
+  var F_eff = Math.min(F, F_lim);
+
+  // C計算
+  var D_for_C = D; // 附属書[2-7]適用時は後で置き換え
+  if(use27){
+    var val1 = F - (B/5.5 + 0.09);
+    var val2 = 2*h;
+    var subtract = Math.max(val1, val2);
+    D_for_C = D - subtract;
+  }
+  var C_raw = 2.69 - 5.31*Math.pow(D_for_C/B, 2);
+  var C = Math.max(0.78, Math.min(2.27, C_raw));
+
+  // f計算（沿海のみ）
+  var f_0_03L = 0.03*L;
+  var f_0_24b = 0.24*b;
+  var f = Math.max(f_0_03L, f_0_24b);
+
+  var N1_val, N2_val, N3_val=null;
+  var formula_results = [];
+  var N_final;
+
+  if(zone==='enkai'){
+    // 第102条 沿海区域 3算式
+    // N ≦ C×L×B×F_eff
+    N1_val = C * L * B * F_eff;
+
+    // N ≦ LB(F1-f)/0.096
+    N2_val = L * B * (F1 - f) / 0.096;
+
+    // N ≦ LB(F2-0.025L)/0.33
+    N3_val = L * B * (F2 - 0.025*L) / 0.33;
+
+    var Ns = [N1_val, N2_val, N3_val];
+    N_final = fl(Math.min(...Ns));
+
+    formula_results = [
+      {name:'算式①  N ≦ C·L·B·F',
+       formula:'N ≦ '+r4(C)+'×'+L+'×'+B+'×'+r4(F_eff),
+       val: N1_val},
+      {name:'算式②  N ≦ L·B·(F₁−f) / 0.096',
+       formula:'N ≦ '+L+'×'+B+'×('+r4(F1)+'−'+r4(f)+') / 0.096',
+       val: N2_val},
+      {name:'算式③  N ≦ L·B·(F₂−0.025L) / 0.33',
+       formula:'N ≦ '+L+'×'+B+'×('+r4(F2)+'−'+r4(0.025*L)+') / 0.33',
+       val: N3_val},
+    ];
+  } else {
+    // 第103条 平水区域 2算式
+    // N ≦ C×L×B×F_eff
+    N1_val = C * L * B * F_eff;
+
+    // N ≦ LB(F2-0.025L)/0.33
+    N2_val = L * B * (F2 - 0.025*L) / 0.33;
+
+    var Ns = [N1_val, N2_val];
+    N_final = fl(Math.min(...Ns));
+
+    formula_results = [
+      {name:'算式①  N ≦ C·L·B·F',
+       formula:'N ≦ '+r4(C)+'×'+L+'×'+B+'×'+r4(F_eff),
+       val: N1_val},
+      {name:'算式②  N ≦ L·B·(F₂−0.025L) / 0.33',
+       formula:'N ≦ '+L+'×'+B+'×('+r4(F2)+'−'+r4(0.025*L)+') / 0.33',
+       val: N2_val},
+    ];
+  }
+
+  var minN = Math.min(...formula_results.map(f=>f.val));
+
+  // 結果表示
+  document.getElementById('resN').textContent = Math.max(0, N_final);
+  document.getElementById('resZoneLabel').textContent =
+    (zone==='enkai'?'第102条（沿海区域）':'第103条（平水区域）') +
+    (use27?' ＋ 附属書[2-7]':'');
+
+  // 算式カード
+  var cards=document.getElementById('formulaCards');
+  cards.innerHTML='';
+  formula_results.forEach(function(f){
+    var isBinding = Math.abs(f.val - minN) < 0.0001;
+    var div=document.createElement('div');
+    div.className='fc'+(isBinding?' binding':' active');
+    div.innerHTML='<div class="fc-head">'+
+      '<span class="fc-name">'+f.name+'</span>'+
+      '<span class="fc-badge '+(isBinding?'badge-binding':'badge-ok')+'">'+
+        (isBinding?'制約条件':'充足')+'</span>'+
+      '</div>'+
+      '<div class="fc-formula">'+f.formula+'</div>'+
+      '<div class="fc-value">'+r4(f.val)+' <span>人（切捨前）</span></div>';
+    cards.appendChild(div);
+  });
+
+  // 中間値テーブル
+  var rows=[
+    ['L（船の長さ）', L+' m'],
+    ['B（船の幅）', B+' m'],
+    ['D（船の深さ）', D+' m'],
+    ['F（中央乾げん）', F+' m　→　実効値 F='+r4(F_eff)+' m（上限 B/5.5+0.09='+r4(F_lim)+' m）'],
+  ];
+  if(zone==='enkai'){
+    rows.push(['F₁（最小乾げん）', F1+' m']);
+    rows.push(['F₂（船尾最小乾げん）', F2+' m']);
+    rows.push(['f = max(0.03L, 0.24b)', '0.03L='+r4(f_0_03L)+'  0.24b='+r4(f_0_24b)+'  →  f='+r4(f)]);
+  } else {
+    rows.push(['F₂（船尾最小乾げん）', F2+' m']);
+  }
+  if(use27){
+    var v1=F-(B/5.5+0.09), v2=2*h;
+    rows.push(['h（客席床高さ）', h+' m']);
+    rows.push(['D有効値の減算量 = max(F−(B/5.5+0.09), 2h)',
+      'max('+r4(v1)+', '+r4(v2)+') = '+r4(Math.max(v1,v2))]);
+    rows.push(['D有効値 D\'', r4(D_for_C)+' m']);
+  }
+  rows.push(['C_raw = 2.69−5.31×(D/B)²', r4(C_raw)+' → C='+r4(C)+
+    '（上限2.27、下限0.78でクランプ）']);
+
+  var tbl=document.getElementById('midTable');
+  tbl.innerHTML='';
+  rows.forEach(function(r){
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td class="lbl">'+r[0]+'</td><td class="val">'+r[1]+'</td>';
+    tbl.appendChild(tr);
+  });
+
+  // 注記
+  var notes=[];
+  if(F > F_lim) notes.push('F（'+F+'m）> B/5.5+0.09（'+r4(F_lim)+'m）のため、Fは'+r4(F_lim)+'mに制限しました。');
+  if(C_raw > 2.27) notes.push('C計算値（'+r4(C_raw)+'）> 2.27 のため、C=2.27に制限。');
+  if(C_raw < 0.78) notes.push('C計算値（'+r4(C_raw)+'）< 0.78 のため、C=0.78に制限。');
+  if(N_final <= 0) notes.push('⚠️ 算定結果が0以下です。乾げん値や船体寸法を確認してください。');
+  if(use27) notes.push('附属書[2-7]適用：第103条のDを有効深さD\'='+r4(D_for_C)+'mに置き換えて計算しました。');
+  document.getElementById('noteBox').innerHTML = notes.length>0 ?
+    notes.map(function(n){return '※ '+n}).join('<br>') : '特記事項なし';
+
+  document.getElementById('results').style.display='block';
+  document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// 初期化
+onZoneChange();
+</script>
+</body>
+</html>
